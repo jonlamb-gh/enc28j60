@@ -15,6 +15,7 @@
 //! - [ENC28J60 Data Sheet](http://ww1.microchip.com/downloads/en/DeviceDoc/39662e.pdf)
 //! - [ENC28J60 Rev. B7 Silicon Errata](http://ww1.microchip.com/downloads/en/DeviceDoc/80349b.pdf)
 
+#![allow(clippy::upper_case_acronyms)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 #![no_std]
@@ -23,7 +24,7 @@ extern crate byteorder;
 extern crate cast;
 extern crate embedded_hal as hal;
 
-use core::mem;
+use core::convert::Infallible;
 use core::ptr;
 use core::u16;
 
@@ -31,7 +32,7 @@ use byteorder::{ByteOrder, LE};
 use cast::{u16, usize};
 use hal::blocking;
 use hal::blocking::delay::DelayMs;
-use hal::digital::{InputPin, OutputPin};
+use hal::digital::v2::{InputPin, OutputPin};
 use hal::spi::{Mode, Phase, Polarity};
 
 use traits::U16Ext;
@@ -102,6 +103,7 @@ where
     NCS: OutputPin,
     INT: IntPin,
     RESET: ResetPin,
+    E: From<NCS::Error>,
 {
     // Maximum frame length
     const MAX_FRAME_LENGTH: u16 = 1518; // value recommended in the data sheet
@@ -140,6 +142,7 @@ where
         D: DelayMs<u8>,
         RESET: ResetPin,
         INT: IntPin,
+        E: From<RESET::Error>,
     {
         // Total buffer size (cf. section 3.2)
         const BUF_SZ: u16 = 8 * 1024;
@@ -166,7 +169,7 @@ where
         if typeid!(RESET == Unconnected) {
             enc28j60.soft_reset()?;
         } else {
-            enc28j60.reset.reset();
+            enc28j60.reset.reset()?;
         }
 
         // This doesn't work because of a silicon bug; see workaround below
@@ -333,7 +336,7 @@ where
         };
 
         // read out the first 6 bytes
-        let mut temp_buf: [u8; 6] = unsafe { mem::uninitialized() };
+        let mut temp_buf: [u8; 6] = [0, 0, 0, 0, 0, 0];
         self.read_buffer_memory(Some(curr_packet), &mut temp_buf)?;
 
         // next packet pointer
@@ -406,7 +409,7 @@ where
         self.write_control_register(bank0::Register::ETXNDH, txnd.high())?;
 
         // 4. reset interrupt flag
-        self.bit_field_clear(common::Register::EIR, { common::EIR::mask().txif() })?;
+        self.bit_field_clear(common::Register::EIR, common::EIR::mask().txif())?;
 
         // 5. start transmission
         self.bit_field_set(common::Register::ECON1, common::ECON1::mask().txrts())?;
@@ -441,10 +444,10 @@ where
 
         self.change_bank(register)?;
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         self.spi
             .write(&[Instruction::BFC.opcode() | register.addr(), mask])?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(())
     }
@@ -461,10 +464,10 @@ where
 
         self.change_bank(register)?;
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         self.spi
             .write(&[Instruction::BFS.opcode() | register.addr(), mask])?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(())
     }
@@ -495,10 +498,10 @@ where
     fn _read_control_register(&mut self, register: Register) -> Result<u8, E> {
         self.change_bank(register)?;
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         let mut buffer = [Instruction::RCR.opcode() | register.addr(), 0];
         self.spi.transfer(&mut buffer)?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(buffer[1])
     }
@@ -528,10 +531,10 @@ where
             self.write_control_register(bank0::Register::ERDPTH, addr.high())?;
         }
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         self.spi.write(&[Instruction::RBM.opcode()])?;
         self.spi.transfer(buf)?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(())
     }
@@ -542,10 +545,10 @@ where
             self.write_control_register(bank0::Register::EWRPTH, addr.high())?;
         }
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         self.spi.write(&[Instruction::WBM.opcode()])?;
         self.spi.write(buffer)?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
         Ok(())
     }
 
@@ -559,10 +562,10 @@ where
     fn _write_control_register(&mut self, register: Register, value: u8) -> Result<(), E> {
         self.change_bank(register)?;
 
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         let buffer = [Instruction::WCR.opcode() | register.addr(), value];
         self.spi.write(&buffer)?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(())
     }
@@ -610,9 +613,9 @@ where
     }
 
     fn soft_reset(&mut self) -> Result<(), E> {
-        self.ncs.set_low();
+        self.ncs.set_low()?;
         self.spi.transfer(&mut [Instruction::SRC.opcode()])?;
-        self.ncs.set_high();
+        self.ncs.set_high()?;
 
         Ok(())
     }
@@ -628,6 +631,7 @@ where
     NCS: OutputPin,
     INT: IntPin + InputPin,
     RESET: ResetPin,
+    E: From<NCS::Error>,
 {
     /// Starts listening for the specified event
     pub fn listen(&mut self, event: Event) -> Result<(), E> {
@@ -637,7 +641,7 @@ where
     }
 
     /// Checks if there's any interrupt pending to be processed by polling the INT pin
-    pub fn interrupt_pending(&mut self) -> bool {
+    pub fn interrupt_pending(&mut self) -> Result<bool, INT::Error> {
         self.int.is_low()
     }
 
@@ -653,27 +657,39 @@ where
 pub struct Unconnected;
 
 // FIXME this should be a closed set trait
+#[doc(hidden)]
 /// [Implementation detail] Reset pin
 pub unsafe trait ResetPin: 'static {
     #[doc(hidden)]
-    fn reset(&mut self);
+    type Error;
+
+    #[doc(hidden)]
+    fn reset(&mut self) -> Result<(), Self::Error>;
 }
 
 unsafe impl ResetPin for Unconnected {
-    fn reset(&mut self) {}
+    type Error = Infallible;
+
+    fn reset(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }
 
 unsafe impl<OP> ResetPin for OP
 where
     OP: OutputPin + 'static,
 {
-    fn reset(&mut self) {
-        self.set_low();
-        self.set_high();
+    type Error = OP::Error;
+
+    fn reset(&mut self) -> Result<(), Self::Error> {
+        self.set_low()?;
+        self.set_high()?;
+        Ok(())
     }
 }
 
 // FIXME this should be a closed set trait
+#[doc(hidden)]
 /// [Implementation detail] Interrupt pin
 pub unsafe trait IntPin: 'static {}
 
@@ -692,19 +708,19 @@ enum Bank {
 #[derive(Clone, Copy)]
 enum Instruction {
     /// Read Control Register
-    RCR = 0b000_00000,
+    RCR = 0b0000_0000,
     /// Read Buffer Memory
-    RBM = 0b001_11010,
+    RBM = 0b0011_1010,
     /// Write Control Register
-    WCR = 0b010_00000,
+    WCR = 0b0100_0000,
     /// Write Buffer Memory
-    WBM = 0b011_11010,
+    WBM = 0b0111_1010,
     /// Bit Field Set
-    BFS = 0b100_00000,
+    BFS = 0b1000_0000,
     /// Bit Field Clear
-    BFC = 0b101_00000,
+    BFC = 0b1010_0000,
     /// System Reset Command
-    SRC = 0b111_11111,
+    SRC = 0b1111_1111,
 }
 
 impl Instruction {
