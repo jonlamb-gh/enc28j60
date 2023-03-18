@@ -21,6 +21,13 @@
 #![deny(missing_docs)]
 #![deny(rust_2018_compatibility)]
 #![deny(rust_2018_idioms)]
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::len_without_is_empty)]
+#![allow(clippy::unusual_byte_groupings)]
+#![allow(clippy::from_over_into)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::if_same_then_else)]
+#![allow(unreachable_patterns)]
 #![deny(warnings)]
 #![no_std]
 
@@ -71,6 +78,7 @@ const CRC_SZ: u16 = 4;
 ///
 /// *NOTE:* this enum may gain more variants in the future
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error<E> {
     /// Late collision
     LateCollision,
@@ -86,10 +94,6 @@ pub enum Error<E> {
 
     /// SPI error
     Spi(E),
-
-    #[doc(hidden)]
-    #[allow(non_camel_case_types)]
-    _DO_NOT_MATCH_AGAINST_THIS_VARIANT,
 }
 
 /// Events that the ENC28J60 can notify about via the INT pin
@@ -688,10 +692,7 @@ where
 
     /// Checks if there's any interrupt pending to be processed by polling the INT pin
     pub fn interrupt_pending(&mut self) -> bool {
-        match self.int.is_low() {
-            Ok(_) => true,
-            _ => false,
-        }
+        matches!(self.int.is_low(), Ok(_))
     }
 
     /// Stops listening for the specified event
@@ -787,6 +788,7 @@ impl<IP> crate::sealed::IntPin for IP where IP: InputPin + 'static {}
 
 /// Packet type, used to configure receive filters
 #[derive(Clone, Copy, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum Packet {
     /// Broadcast packets
     Broadcast,
@@ -794,9 +796,6 @@ pub enum Packet {
     Multicast,
     /// Unicast packets
     Unicast,
-    #[doc(hidden)]
-    #[allow(non_camel_case_types)]
-    _DO_NOT_MATCH_AGAINST_THIS_VARIANT,
 }
 
 #[derive(Clone, Copy, PartialEq)]
