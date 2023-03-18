@@ -390,7 +390,7 @@ where
         self.write_control_register(bank0::Register::ETXNDH, txnd.high())?;
 
         // 4. reset interrupt flag
-        self.bit_field_clear(common::Register::EIR, { common::EIR::mask().txif() })?;
+        self.bit_field_clear(common::Register::EIR, common::EIR::mask().txif())?;
 
         // 5. start transmission
         self.bit_field_set(common::Register::ECON1, common::ECON1::mask().txrts())?;
