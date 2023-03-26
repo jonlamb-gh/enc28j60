@@ -701,6 +701,11 @@ where
             Event::Pkt => self.bit_field_clear(common::Register::EIE, common::EIE::mask().pktie()),
         }
     }
+
+    /// Get access to the interrupt pin
+    pub fn int_pin(&mut self) -> &mut INT {
+        &mut self.int
+    }
 }
 
 /// A packet that has not been read yet
