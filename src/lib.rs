@@ -201,7 +201,7 @@ where
             {}
         }
 
-        if enc28j60.read_control_register(bank3::Register::EREVID)? == 0 {
+        if enc28j60.erevid()? == 0 {
             return Err(Error::ErevidIsZero);
         }
 
@@ -306,6 +306,25 @@ where
     SPI: blocking::spi::Transfer<u8, Error = E> + blocking::spi::Write<u8, Error = E>,
     NCS: OutputPin,
 {
+    /// Return the device revision (EREVID)
+    pub fn erevid(&mut self) -> Result<u8, Error<E>> {
+        let id = self.read_control_register(bank3::Register::EREVID)?;
+        Ok(id)
+    }
+
+    /// Return the ESTAT register
+    pub fn estat(&mut self) -> Result<u8, Error<E>> {
+        let r = self.read_control_register(common::Register::ESTAT)?;
+        Ok(r)
+    }
+
+    /// Return the EIR register
+    pub fn eir(&mut self) -> Result<u8, Error<E>> {
+        //let r = common::EIR(self.read_control_register(common::Register::EIR)?);
+        let r = self.read_control_register(common::Register::EIR)?;
+        Ok(r)
+    }
+
     /// Flushes the transmit buffer, ensuring all pending transmissions have completed
     /// NOTE: The returned packet *must* be `read` or `ignore`-d, otherwise this method will always
     /// return `None` on subsequent invocations
