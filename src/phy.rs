@@ -28,3 +28,8 @@ register!(PHCON2, 0, u16, {
     #[doc = "PHY Force Linkup bit"]
     frclnk @ 14,
 });
+
+register!(PHSTAT2, 0, u16, {
+    #[doc = "Link Status bit"]
+    lstat @ 10,
+});

@@ -4,6 +4,8 @@
 
 [ENC28J60]: http://www.microchip.com/wwwproducts/en/en022889
 
+NOTE: this branch (embassy-fork) is a copy of https://github.com/embassy-rs/embassy/tree/main/embassy-net-enc28j60
+
 ## [API documentation](https://docs.rs/enc28j60)
 
 ## Examples

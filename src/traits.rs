@@ -1,7 +1,4 @@
-use core::mem;
 use core::ops::Range;
-
-use byteorder::{ByteOrder, BE, LE};
 
 pub(crate) trait OffsetSize {
     fn offset(self) -> u8;
@@ -34,12 +31,6 @@ pub(crate) trait U16Ext {
     fn low(self) -> u8;
 
     fn high(self) -> u8;
-
-    // Big Endian byte representation
-    fn be_repr(self) -> [u8; 2];
-
-    // Little Endian byte representation
-    fn le_repr(self) -> [u8; 2];
 }
 
 impl U16Ext for u16 {
@@ -53,18 +44,6 @@ impl U16Ext for u16 {
 
     fn high(self) -> u8 {
         (self >> 8) as u8
-    }
-
-    fn be_repr(self) -> [u8; 2] {
-        let mut bytes: [u8; 2] = unsafe { mem::uninitialized() };
-        BE::write_u16(&mut bytes, self);
-        bytes
-    }
-
-    fn le_repr(self) -> [u8; 2] {
-        let mut bytes: [u8; 2] = unsafe { mem::uninitialized() };
-        LE::write_u16(&mut bytes, self);
-        bytes
     }
 }
 

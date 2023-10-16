@@ -24,9 +24,9 @@ impl Register {
     }
 }
 
-impl Into<::Register> for Register {
-    fn into(self) -> ::Register {
-        ::Register::Common(self)
+impl Into<super::Register> for Register {
+    fn into(self) -> super::Register {
+        super::Register::Common(self)
     }
 }
 

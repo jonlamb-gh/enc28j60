@@ -58,9 +58,9 @@ impl Register {
     }
 }
 
-impl Into<::Register> for Register {
-    fn into(self) -> ::Register {
-        ::Register::Bank1(self)
+impl Into<super::Register> for Register {
+    fn into(self) -> super::Register {
+        super::Register::Bank1(self)
     }
 }
 
