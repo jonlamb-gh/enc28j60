@@ -306,6 +306,12 @@ where
     SPI: blocking::spi::Transfer<u8, Error = E> + blocking::spi::Write<u8, Error = E>,
     NCS: OutputPin,
 {
+    /// Get whether the link is up
+    pub fn is_link_up(&mut self) -> Result<bool, Error<E>> {
+        let bits = self.read_phy_register(phy::Register::PHSTAT2)?;
+        Ok(phy::PHSTAT2(bits).lstat() == 1)
+    }
+
     /// Return the device revision (EREVID)
     pub fn erevid(&mut self) -> Result<u8, Error<E>> {
         let id = self.read_control_register(bank3::Register::EREVID)?;
