@@ -189,16 +189,19 @@ where
 
         // (software) reset to return to a clean slate state
         if typeid!(RESET == Unconnected) {
+            delay.delay_ms(5);
             enc28j60.soft_reset()?;
-
             // work around errata #2
-            delay.delay_ms(1);
+            delay.delay_ms(5);
         } else {
+            delay.delay_ms(5);
             enc28j60.reset.reset();
+            delay.delay_ms(5);
+        }
 
-            while common::ESTAT(enc28j60.read_control_register(common::Register::ESTAT)?).clkrdy()
-                == 0
-            {}
+        // Wait for clk
+        while common::ESTAT(enc28j60.read_control_register(common::Register::ESTAT)?).clkrdy() == 0
+        {
         }
 
         if enc28j60.erevid()? == 0 {
